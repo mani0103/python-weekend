@@ -14,6 +14,14 @@ def get_html(args):
     r = s.get(url3)
     return r.text
 
+def get_cached_data(args):
+    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date_formatted']}"
+    return get_from_redis(connection_name)
+
+def set_cached_data(args, data):
+    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date_formatted']}"
+    return write_to_redis(connection_name, data)
+
 #    s.get("https://bustickets.regiojet.com/")
 #    s.get('https://bustickets.regiojet.com/Booking/from/10202002/to/10202003/tarif/REGULAR/departure/20180224/retdep/20180224/return/false')
 #    r = s.get("https://bustickets.regiojet.com/Booking/from/10202002/to/10202003/tarif/REGULAR/departure/20180224/retdep/20180224/return/false?1-1.IBehaviorListener.0-mainPanel-routesPanel&_=1519469955659")
@@ -101,8 +109,14 @@ def search_for_connections(src, dst, date):
         'to_id': get_destinations_id(dst)
     }
     #return args
-    html = get_html(args)
-    return get_data(html, args)
+    cached_data = get_cached_data(args)
+    if cached_data is not None:
+        return cached_data
+    else:
+        html = get_html(args)
+        data = get_data(html, args)
+        set_cached_data(args, data)
+        return data
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Find and book some flights")
