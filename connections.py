@@ -91,6 +91,19 @@ def get_from_redis(key):
     redis = connect_to_redis()
     return redis.get(key)
 
+def search_for_connections(src, dst, date):
+    args = {
+        'date': date,
+        'from': src,
+        'to': dst,
+        'date_formatted': datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d"),
+        'from_id': get_destinations_id(src),
+        'to_id': get_destinations_id(dst)
+    }
+    #return args
+    html = get_html(args)
+    return get_data(html, args)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Find and book some flights")
     parser.add_argument('--date', default=datetime.now().strftime("%Y-%m-%d"))
