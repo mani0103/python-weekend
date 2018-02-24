@@ -1,3 +1,4 @@
+import re
 import argparse
 import requests
 from bs4 import BeautifulSoup
@@ -50,11 +51,12 @@ def get_data(html, args):
         price_value = ""
         if price is not None:
             price_value = price.find('span').text
+            price_value = re.match(r"^\d+\.\d+",price_value).group(0)
         dep_time = route.find('div',{'class': 'col_depart gray_gradient'}).text
         arr_time = route.find('div',{'class': 'col_arival gray_gradient'}).text
 
         route_type = route.find('img')['title']
-        #print(free_space, price_value, dep_time, arr_time, route_type)
+        print(free_space, price_value, dep_time, arr_time, route_type)
 
         result.append( {
                 "dep": f"{args['date']} {dep_time}:00",
@@ -63,7 +65,7 @@ def get_data(html, args):
                 "dst": args['to'],
                 "free_seats": free_space,
                 "price": price_value,
-                "type": route_type, # optional (train/bus)
+                "type": "train" if route_type == "train" else "bus" , # optional (train/bus)
                 "from_id": args['from_id'], # optional (student agency id)
                 "to_id": args['to_id'] # optional (student agency id)
                 } )
@@ -103,7 +105,8 @@ if __name__ == '__main__':
     
 
     html = get_html(args)
-    pprint(get_data(html, args))
+    #pprint(get_data(html, args))
+    get_data(html, args)
 
     #write_to_redis("city_id_brno",get_destinations_id('Brno'))
 
