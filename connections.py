@@ -15,12 +15,12 @@ def get_html(args):
     return r.text
 
 def get_cached_data(args):
-    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date_formatted']}"
+    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date']}"
     return get_from_redis(connection_name)
 
 def set_cached_data(args, data):
-    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date_formatted']}"
-    return write_to_redis(connection_name, data)
+    connection_name = f"connection_{args['from_id']}_{args['to_id']}_{args['date']}"
+    write_to_redis(connection_name, data)
 
 #    s.get("https://bustickets.regiojet.com/")
 #    s.get('https://bustickets.regiojet.com/Booking/from/10202002/to/10202003/tarif/REGULAR/departure/20180224/retdep/20180224/return/false')
@@ -37,7 +37,7 @@ def create_links(args):
             f"retdep/20180224/return/false"
             )
     url3 = f'{url2}?1-1.IBehaviorListener.0-mainPanel-routesPanel&_=1519469955659'
-    return (url1, url2, url3)
+    return (url1, url2, url3)   
 
 
 def get_destinations_id(dest):
@@ -54,7 +54,7 @@ def get_data(html, args):
     routes = soup.findAll('div',{'class': 'item_blue blue_gradient_our routeSummary free'})
     result = []
     for route in routes:
-        free_space = route.find('div',{'class': 'col_space gray_gradient'}).text.strip()
+        free_space = int(route.find('div',{'class': 'col_space gray_gradient'}).text.strip())
         price = route.find('div',{'class': 'col_price'})
         price_value = ""
         if price is not None:
@@ -64,19 +64,21 @@ def get_data(html, args):
         arr_time = route.find('div',{'class': 'col_arival gray_gradient'}).text
 
         route_type = route.find('img')['title']
-        print(free_space, price_value, dep_time, arr_time, route_type)
+        #print(free_space, price_value, dep_time, arr_time, route_type)
+        if free_space < args['passengers']:  # happy path
+            continue   
 
         result.append( {
-                "dep": f"{args['date']} {dep_time}:00",
-                "arr": f"{args['date']} {arr_time}:00",
-                "src": args['from'],
-                "dst": args['to'],
-                "free_seats": free_space,
-                "price": price_value,
-                "type": "train" if route_type == "train" else "bus" , # optional (train/bus)
-                "from_id": args['from_id'], # optional (student agency id)
-                "to_id": args['to_id'] # optional (student agency id)
-                } )
+            "dep": f"{args['date']} {dep_time}:00",
+            "arr": f"{args['date']} {arr_time}:00",
+            "src": args['from'],
+            "dst": args['to'],
+            "free_seats": free_space,
+            "price": price_value,
+            "type": "train" if route_type == "train" else "bus" , # optional (train/bus)
+            "from_id": args['from_id'], # optional (student agency id)
+            "to_id": args['to_id'] # optional (student agency id)
+        })
     return result
 
 
@@ -99,19 +101,20 @@ def get_from_redis(key):
     redis = connect_to_redis()
     return redis.get(key)
 
-def search_for_connections(src, dst, date):
+def search_for_connections(src, dst, date, passengers=1):
     args = {
         'date': date,
         'from': src,
         'to': dst,
         'date_formatted': datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d"),
         'from_id': get_destinations_id(src),
-        'to_id': get_destinations_id(dst)
+        'to_id': get_destinations_id(dst),
+        'passengers': passengers
     }
     #return args
     cached_data = get_cached_data(args)
     if cached_data is not None:
-        return cached_data
+        return cached_data.decode()
     else:
         html = get_html(args)
         data = get_data(html, args)
@@ -121,8 +124,9 @@ def search_for_connections(src, dst, date):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Find and book some flights")
     parser.add_argument('--date', default=datetime.now().strftime("%Y-%m-%d"))
-    parser.add_argument('--from')
-    parser.add_argument('--to')
+    parser.add_argument('--from', default="Praha")
+    parser.add_argument('--to', default="Brno")
+    parser.add_argument('--passengers', default=1)
     args = parser.parse_args()
 
     args = vars(args)
@@ -130,10 +134,17 @@ if __name__ == '__main__':
     args['from_id'] = get_destinations_id(args['from'])
     args['to_id'] = get_destinations_id(args['to'])
     
+    cached_data = get_cached_data(args)
+    if cached_data is not None:
+        pprint(cached_data.decode())
+    else:
+        html = get_html(args)
+        data = get_data(html, args)
+        set_cached_data(args, data)
+        pprint(data)
 
-    html = get_html(args)
-    #pprint(get_data(html, args))
-    get_data(html, args)
+
+    #get_data(html, args)
 
     #write_to_redis("city_id_brno",get_destinations_id('Brno'))
 
