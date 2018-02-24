@@ -2,6 +2,7 @@ import argparse
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+from redis import StrictRedis
 
 def get_html(args):
     url1, url2, url3 = create_links(args)
@@ -36,7 +37,29 @@ def get_destinations_id(dest):
     for destination in destinations['destinations']:
         for city in destination['cities']:
             if city['name'] == dest:
+                print(city)
                 return city['id']
+
+def get_data(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    routes = soup.findAll('div',{'class': 'item_blue blue_gradient_our routeSummary free'})
+    for route in routes:
+        free_space = route.find('div',{'class': 'col_space gray_gradient'}).text.strip()
+        price = route.find('div',{'class': 'col_price'})
+        print(price)
+
+def write_to_redis(key, value):
+    redis_config = {
+        'host': '188.166.60.144',
+        'password': 'akd89DSk23Kldl0ram29',
+        'port': 6379
+        }
+    redis = StrictRedis(**redis_config)
+    if redis.get(key):
+        return
+    else:
+        redis.set(key, value)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Find and book some flights")
@@ -49,12 +72,19 @@ if __name__ == '__main__':
     args['date'] = datetime.strptime(args['date'], "%Y-%m-%d").strftime("%Y%m%d")
     args['from'] = get_destinations_id(args['from'])
     args['to'] = get_destinations_id(args['to'])
-    print(args)
-    print(create_links(args))
+    
 
 
-    with open("result.html",mode="w") as f:
-        f.write(get_html(args))
+    #html = get_html(args)
+    #get_data(html)
+
+
+
+    #print(args)
+    #print(create_links(args))
+
+#    with open("result.html",mode="w") as f:
+#        f.write(get_html(args))
 
 
 #print('8.10' in r.text)
