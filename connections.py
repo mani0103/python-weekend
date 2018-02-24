@@ -9,7 +9,7 @@ def get_html(args):
     s.get(url1)
     s.get(url2)
     r = s.get(url3)
-    return r.content
+    return r.text
 
 #    s.get("https://bustickets.regiojet.com/")
 #    s.get('https://bustickets.regiojet.com/Booking/from/10202002/to/10202003/tarif/REGULAR/departure/20180224/retdep/20180224/return/false')
@@ -51,15 +51,16 @@ if __name__ == '__main__':
     args['to'] = get_destinations_id(args['to'])
     print(args)
     print(create_links(args))
-    print(get_html(args))
+
+
+    with open("result.html",mode="w") as f:
+        f.write(get_html(args))
 
 
 #print('8.10' in r.text)
 
 #soup = BeautifulSoup(r.content, 'html.parser')
 #print(soup.prettify())
-    #with open("result.html",mode="w") as f:
-     #   f.write(get_html)
 #print(soup.select("div.routeSummary"))
 #routes = soup.findall('div',class_ = "routeDetail")
 
