@@ -1,4 +1,5 @@
 import re
+import json
 import argparse
 import requests
 from bs4 import BeautifulSoup
@@ -95,7 +96,7 @@ def write_to_redis(key, value):
     if redis.get(key):
         return
     else:
-        redis.set(key, value)
+        redis.set(key, json.dumps(value))
 
 def get_from_redis(key):
     redis = connect_to_redis()
@@ -114,7 +115,7 @@ def search_for_connections(src, dst, date, passengers=1):
     #return args
     cached_data = get_cached_data(args)
     if cached_data is not None:
-        return cached_data.decode()
+        return json.loads(cached_data.decode())
     else:
         html = get_html(args)
         data = get_data(html, args)
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     
     cached_data = get_cached_data(args)
     if cached_data is not None:
-        pprint(cached_data.decode())
+        pprint(json.loads(cached_data.decode()))
     else:
         html = get_html(args)
         data = get_data(html, args)
