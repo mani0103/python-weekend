@@ -70,10 +70,10 @@ def get_data(html, args):
             continue   
 
         result.append( {
-            "dep": f"{args['date']} {dep_time}:00",
-            "arr": f"{args['date']} {arr_time}:00",
-            "src": args['from'],
-            "dst": args['to'],
+            "departure": f"{args['date']} {dep_time}:00",
+            "arrival": f"{args['date']} {arr_time}:00",
+            "from": args['from'],
+            "to": args['to'],
             "free_seats": free_space,
             "price": price_value,
             "type": "train" if route_type == "train" else "bus" , # optional (train/bus)
@@ -96,7 +96,7 @@ def write_to_redis(key, value):
     if redis.get(key):
         return
     else:
-        redis.set(key, json.dumps(value))
+        redis.setex(key, 1000, json.dumps(value))
 
 def get_from_redis(key):
     redis = connect_to_redis()
